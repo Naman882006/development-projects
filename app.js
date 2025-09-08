@@ -67,9 +67,6 @@ store.on("error",()=>{
  }
 
  
-// app.get("/",(req,res)=>{
-//     res.send("welcome naman");
-// })
 
 
  app.use(session(sessionOptions));
