@@ -28,40 +28,48 @@ if (!listing) {
 res.render("listings/show.ejs",{listing})
 }
 
-module.exports.createListing=async (req,res,next)=>{
- const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${listing.location}`);
-const data = await response.json();
+module.exports.createListing = async (req, res, next) => {
+  // 1. Get location from form input
+  const { location } = req.body.listing;
 
-// Find specifically where addresstype = "city"
-const place = data.find(item => item.addresstype === "city") || data[0];
-if (!place) {
+  // 2. Call Nominatim API for geocoding
+  const response = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=json&q=${location}`
+  );
+  const data = await response.json();
+
+  // 3. Pick best matching place
+  const place = data.find(item => item.addresstype === "city") || data[0];
+  if (!place) {
     req.flash("error", "Location not found!");
     return res.redirect("/listings/new");
   }
 
-  // GeoJSON format
+  // 4. Convert to GeoJSON
   const geometry = {
     type: "Point",
-    coordinates: [parseFloat(place.lon), parseFloat(place.lat)] // [lon, lat]
+    coordinates: [parseFloat(place.lon), parseFloat(place.lat)], // [lon, lat]
   };
 
-    
+  // 5. Create new listing
+  let url = req.file?.path;
+  let filename = req.file?.filename;
 
+  const newListing = new Listing(req.body.listing);
+  newListing.owner = req.user._id;
+  if (req.file) {
+    newListing.image = { url, filename };
+  }
+  newListing.geometry = geometry;
 
-   let url = req.file.path;
-   let filename = req.file.filename;
+  // 6. Save to DB
+  let saveListing = await newListing.save();
+  console.log(saveListing);
 
-const newListing = new Listing(req.body.listing);
-newListing.owner = req.user._id;
-newListing.image ={url,filename};
-newListing.geometry = geometry;
-let saveListing = await newListing.save();
-console.log(saveListing);
-req.flash("success","New Listing Created!");
-res.redirect("/listings");
+  req.flash("success", "New Listing Created!");
+  res.redirect("/listings");
+};
 
-
-}
 
 
 module.exports.editListing=async(req,res)=>{

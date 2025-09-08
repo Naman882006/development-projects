@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
 const Review = require("./review.js");
-const { required } = require("joi");
+
 const Schema = mongoose.Schema;
 
 
@@ -60,5 +60,5 @@ listingSchema.post("findOneAndDelete",async(listing)=>{
 })
 
 
-const listing = mongoose.models.listing || mongoose.model("listing", listingSchema);
-module.exports = listing;
+const Listing = mongoose.models.Listing || mongoose.model("Listing", listingSchema);
+module.exports = Listing;
