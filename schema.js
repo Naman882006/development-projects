@@ -1,9 +1,8 @@
 const joi=require("joi");
 module.exports.listing = require('./models/listing');
-const { _descriptors } = require('chart.js/helpers');
 const review = require('./models/review');
 const Joi = require("joi");
-const { image } = require("framer-motion/client");
+
 
 module.exports.listingSchema = Joi.object({
     listing : joi.object({

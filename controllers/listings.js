@@ -1,4 +1,4 @@
-const { image } = require("framer-motion/client");
+
 const Listing = require("../models/listing");
 
 
