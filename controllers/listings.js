@@ -28,46 +28,44 @@ if (!listing) {
 res.render("listings/show.ejs",{listing})
 }
 
-module.exports.createListing = async (req, res, next) => {
-  // 1. Get location from form input
-  const { location } = req.body.listing;
+module.exports.createListing = async (req, res) => {
+    try {
+        const { location } = req.body.listing;
 
-  // 2. Call Nominatim API for geocoding
-  const response = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=json&q=${location}`
-  );
-  const data = await response.json();
+        // Geocoding
+        const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${location}`);
+        const data = await response.json();
 
-  // 3. Pick best matching place
-  const place = data.find(item => item.addresstype === "city") || data[0];
-  if (!place) {
-    req.flash("error", "Location not found!");
-    return res.redirect("/listings/new");
-  }
+        const place = data.find(item => item.addresstype === "city") || data[0];
+        if (!place) {
+            req.flash("error", "Location not found!");
+            return res.redirect("/listings/new");
+        }
 
-  // 4. Convert to GeoJSON
-  const geometry = {
-    type: "Point",
-    coordinates: [parseFloat(place.lon), parseFloat(place.lat)], // [lon, lat]
-  };
+        const geometry = {
+            type: "Point",
+            coordinates: [parseFloat(place.lon), parseFloat(place.lat)],
+        };
 
-  // 5. Create new listing
-  let url = req.file?.path;
-  let filename = req.file?.filename;
+        const newListing = new Listing(req.body.listing);
+        newListing.owner = req.user._id;
 
-  const newListing = new Listing(req.body.listing);
-  newListing.owner = req.user._id;
-  if (req.file) {
-    newListing.image = { url, filename };
-  }
-  newListing.geometry = geometry;
+        if (req.file) {
+            newListing.image = { url: req.file.path, filename: req.file.filename };
+        }
+        newListing.geometry = geometry;
 
-  // 6. Save to DB
-  let saveListing = await newListing.save();
-  console.log(saveListing);
+        const saveListing = await newListing.save();
+        console.log(saveListing);
 
-  req.flash("success", "New Listing Created!");
-  res.redirect("/listings");
+        req.flash("success", "New Listing Created!");
+        // ✅ Traditional redirect to /listings
+        res.redirect("/listings");
+    } catch (err) {
+        console.error(err);
+        req.flash("error", "Something went wrong!");
+        res.redirect("/listings/new");
+    }
 };
 
 
