@@ -55,8 +55,10 @@ module.exports.createListing = async (req, res) => {
 
     // Geocoding via axios
     const nomRes = await axios.get("https://nominatim.openstreetmap.org/search", {
-      params: { format: "json", q: location, limit: 5 }
-    });
+  params: { format: "json", q: location, limit: 5 },
+  headers: { "User-Agent": "Trivana-App/1.0 (your-email@example.com)" } 
+});
+
     const data = nomRes.data;
     console.log("NOMINATIM RESPONSE LENGTH:", Array.isArray(data) ? data.length : typeof data);
 
