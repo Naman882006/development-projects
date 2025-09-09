@@ -30,39 +30,26 @@ res.render("listings/show.ejs",{listing})
 
 module.exports.createListing = async (req, res) => {
   try {
-    console.log("----- CREATE LISTING START -----");
-    console.log("REQ.BODY:", req.body);
-    console.log("REQ.FILE:", req.file);
-    console.log("REQ.USER:", req.user ? req.user._id : "NO REQ.USER");
+    const { location } = req.body.listing;
 
-    // Ensure user is logged in
-    if (!req.user) {
-      req.flash("error", "You must be logged in to create a listing.");
-      return res.redirect("/login");
-    }
+    // Geocoding with axios
+    const response = await axios.get(
+      "https://nominatim.openstreetmap.org/search",
+      {
+        params: {
+          format: "json",
+          q: location
+        },
+        headers: {
+         "User-Agent": "TrivanaApp/1.0 (namansharma882006@gmail.com)"
+ // Nominatim requires this
+        }
+      }
+    );
 
-    const listingData = req.body.listing;
-    if (!listingData) {
-      req.flash("error", "Form data missing. Make sure fields are named listing[...]");
-      return res.redirect("/listings/new");
-    }
+    const data = response.data;
 
-    const { location } = listingData;
-    if (!location) {
-      req.flash("error", "Location is required.");
-      return res.redirect("/listings/new");
-    }
-
-    // Geocoding via axios
-    const nomRes = await axios.get("https://nominatim.openstreetmap.org/search", {
-  params: { format: "json", q: location, limit: 5 },
-  headers: { "User-Agent": "Trivana-App/1.0 (your-email@example.com)" } 
-});
-
-    const data = nomRes.data;
-    console.log("NOMINATIM RESPONSE LENGTH:", Array.isArray(data) ? data.length : typeof data);
-
-    const place = Array.isArray(data) && (data.find(item => item.addresstype === "city") || data[0]);
+    const place = data.find(item => item.addresstype === "city") || data[0];
     if (!place) {
       req.flash("error", "Location not found!");
       return res.redirect("/listings/new");
@@ -70,29 +57,26 @@ module.exports.createListing = async (req, res) => {
 
     const geometry = {
       type: "Point",
-      coordinates: [parseFloat(place.lon), parseFloat(place.lat)]
+      coordinates: [parseFloat(place.lon), parseFloat(place.lat)],
     };
 
-    const newListing = new Listing(listingData);
+    const newListing = new Listing(req.body.listing);
     newListing.owner = req.user._id;
 
     if (req.file) {
       newListing.image = { url: req.file.path, filename: req.file.filename };
     }
-
     newListing.geometry = geometry;
 
     const saveListing = await newListing.save();
-    console.log("Saved listing id:", saveListing._id);
+    console.log("Listing Saved:", saveListing);
 
     req.flash("success", "New Listing Created!");
-    console.log("----- CREATE LISTING END (SUCCESS) -----");
-    return res.redirect("/listings");
+    res.redirect("/listings");
   } catch (err) {
-    console.error("CREATE LISTING ERROR:", err && err.stack ? err.stack : err);
-    // show message but keep it readable
-    req.flash("error", err.message || "Something went wrong!");
-    return res.redirect("/listings/new");
+    console.error("CREATE LISTING ERROR:", err);
+    req.flash("error", "Something went wrong while creating listing!");
+    res.redirect("/listings/new");
   }
 };
 
